@@ -1,11 +1,11 @@
-cmake_minimum_required (VERSION 2.6) 
+cmake_minimum_required (VERSION 3.4.5)
 
 PROJECT(ANPR)
 SET(PROJECT_VERSION "0.1")
 
 # Opencv Package
 FIND_PACKAGE( OpenCV REQUIRED )
-IF (${OpenCV_VERSION} VERSION_LESS 2.3.0)
+IF (${OpenCV_VERSION} VERSION_LESS 3.4.5)
 	MESSAGE(FATAL_ERROR "OpenCV version is not compatible : ${OpenCV_VERSION}")
 ENDIF()
 

@@ -1,6 +1,6 @@
 
 #include "OCR.h"
-
+using namespace cv::ml;
 const char OCR::strCharacters[] = {'0','1','2','3','4','5','6','7','8','9','B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z'};
 const int OCR::numCharacters=30;
 
@@ -83,6 +83,8 @@ vector<CharSegment> OCR::segment(Plate plate){
     vector<CharSegment> output;
     //Threshold input image
     Mat img_threshold;
+    // CV_THRESH_BINARY_INV 可以将白色的输入值变成黑色，将黑色的输入值变成白色，执行反阈值化，因为轮廓算法
+    //是查找白色像素
     threshold(input, img_threshold, 60, 255, CV_THRESH_BINARY_INV);
     if(DEBUG)
         imshow("Threshold plate", img_threshold);
@@ -117,7 +119,7 @@ vector<CharSegment> OCR::segment(Plate plate){
         Mat auxRoi(img_threshold, mr);
         if(verifySizes(auxRoi)){
             auxRoi=preprocessChar(auxRoi);
-            output.push_back(CharSegment(auxRoi, mr));
+            output.push_back(CharSegment(auxRoi, mr)); //使CharSegment 对分割的字符进行预处理
             rectangle(result, mr, Scalar(0,125,255));
         }
         ++itc;
@@ -288,17 +290,20 @@ Mat OCR::features(Mat in, int sizeData){
     return out;
 }
 
-void OCR::train(Mat TrainData, Mat classes, int nlayers){
+void OCR::train(Mat TrainData3, Mat classes, int nlayers){
     Mat layers(1,3,CV_32SC1);
-    layers.at<int>(0)= TrainData.cols;
+    layers.at<int>(0)= TrainData3.cols;
     layers.at<int>(1)= nlayers;
     layers.at<int>(2)= numCharacters;
-    ann.create(layers, CvANN_MLP::SIGMOID_SYM, 1, 1);
-
+//    ann=ml::ANN_MLP::create(layers, cv::ml::ANN_MLP::SIGMOID_SYM, 1, 1);
+    ann = ml::ANN_MLP::create();
+    ann->setActivationFunction(ANN_MLP::SIGMOID_SYM,1,1);
+    ann->setLayerSizes(layers);
+    ann->setTrainMethod(ANN_MLP::TrainingMethods::BACKPROP);
     //Prepare trainClases
     //Create a mat with n trained data by m classes
     Mat trainClasses;
-    trainClasses.create( TrainData.rows, numCharacters, CV_32FC1 );
+    trainClasses.create( TrainData3.rows, numCharacters, CV_32FC1 );
     for( int i = 0; i <  trainClasses.rows; i++ )
     {
         for( int k = 0; k < trainClasses.cols; k++ )
@@ -310,17 +315,20 @@ void OCR::train(Mat TrainData, Mat classes, int nlayers){
                 trainClasses.at<float>(i,k) = 0;
         }
     }
-    Mat weights( 1, TrainData.rows, CV_32FC1, Scalar::all(1) );
+    Mat weights( 1, TrainData3.rows, CV_32FC1, Scalar::all(1) );
     
     //Learn classifier
-    ann.train( TrainData, trainClasses, weights );
+    Ptr<ml::TrainData> trainData2 = TrainData::create(TrainData3, ROW_SAMPLE, trainClasses);
+    ann->train(trainData2);
+//  ann->train( TrainData, trainClasses, weights );
+
     trained=true;
 }
 
 int OCR::classify(Mat f){
     int result=-1;
     Mat output(1, numCharacters, CV_32FC1);
-    ann.predict(f, output);
+    ann->predict(f, output);
     Point maxLoc;
     double maxVal;
     minMaxLoc(output, 0, &maxVal, 0, &maxLoc);
@@ -329,15 +337,15 @@ int OCR::classify(Mat f){
     return maxLoc.x;
 }
 
-int OCR::classifyKnn(Mat f){
-    int response = (int)knnClassifier.find_nearest( f, K );
-    return response;
-}
-void OCR::trainKnn(Mat trainSamples, Mat trainClasses, int k){
-    K=k;
-    // learn classifier
-    knnClassifier.train( trainSamples, trainClasses, Mat(), false, K );
-}
+//int OCR::classifyKnn(Mat f){
+//    int response = (int)knnClassifier->find_nearest( f, K );
+//    return response;
+//}
+//void OCR::trainKnn(Mat trainSamples, Mat trainClasses, int k){
+//    K=k;
+//    // learn classifier
+//    knnClassifier->train( trainSamples, trainClasses, Mat(), false, K );
+//}
 
 string OCR::run(Plate *input){
     

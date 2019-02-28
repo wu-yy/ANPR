@@ -3,14 +3,15 @@
 */
 
 #include "DetectRegions.h"
-
+#include <opencv2/opencv.hpp>
+using namespace cv;
 void DetectRegions::setFilename(string s) {
         filename=s;
 }
 
 DetectRegions::DetectRegions(){
     showSteps=false;
-    saveRegions=false;
+    saveRegions= false;  //TODO:wuyy
 }
 
 bool DetectRegions::verifySizes(RotatedRect mr){
@@ -44,7 +45,7 @@ Mat DetectRegions::histeq(Mat in)
     if(in.channels()==3){
         Mat hsv;
         vector<Mat> hsvSplit;
-        cvtColor(in, hsv, CV_BGR2HSV);
+        cvtColor(in, hsv,  CV_BGR2HSV);
         split(hsv, hsvSplit);
         equalizeHist(hsvSplit[2], hsvSplit[2]);
         merge(hsvSplit, hsv);
@@ -188,12 +189,14 @@ vector<Plate> DetectRegions::segment(Mat input){
             
             Mat resultResized;
             resultResized.create(33,144, CV_8UC3);
+            //调整图像的大小，具有相同的大小
             resize(img_crop, resultResized, resultResized.size(), 0, 0, INTER_CUBIC);
+
             //Equalize croped image
             Mat grayResult;
             cvtColor(resultResized, grayResult, CV_BGR2GRAY); 
             blur(grayResult, grayResult, Size(3,3));
-            grayResult=histeq(grayResult);
+            grayResult=histeq(grayResult); //使用histeq光照直方图均衡调整所有的图像，的亮度
             if(saveRegions){ 
                 stringstream ss(stringstream::in | stringstream::out);
                 ss << "tmp/" << filename << "_" << i << ".jpg";
