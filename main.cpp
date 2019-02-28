@@ -121,7 +121,8 @@ int main ( int argc, char** argv )
     //For each plate detected, recognize it with OCR
     OCR ocr("OCR.xml");
     ocr.saveSegments=true;
-    ocr.DEBUG=false;
+    ocr.DEBUG= false;
+
     ocr.filename=filename_whithoutExt;
     for(int i=0; i< plates.size(); i++){
         Plate plate=plates[i];

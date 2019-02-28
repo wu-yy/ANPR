@@ -11,13 +11,13 @@ CharSegment::CharSegment(Mat i, Rect p){
 }
 
 OCR::OCR(){
-    DEBUG=false;
+    DEBUG=true; // 默认检测的debug 是false
     trained=false;
     saveSegments=false;
     charSize=20;
 }
 OCR::OCR(string trainFile){
-    DEBUG=false;
+    DEBUG= true;  //默认检测的debug 是false
     trained=false;
     saveSegments=false;
     charSize=20;
@@ -293,13 +293,13 @@ Mat OCR::features(Mat in, int sizeData){
 void OCR::train(Mat TrainData3, Mat classes, int nlayers){
     Mat layers(1,3,CV_32SC1);
     layers.at<int>(0)= TrainData3.cols;
-    layers.at<int>(1)= nlayers;
+    layers.at<int>(1)= 20;//nlayers;
     layers.at<int>(2)= numCharacters;
 //    ann=ml::ANN_MLP::create(layers, cv::ml::ANN_MLP::SIGMOID_SYM, 1, 1);
-    ann = ml::ANN_MLP::create();
+    ann = ANN_MLP::create();
     ann->setActivationFunction(ANN_MLP::SIGMOID_SYM,1,1);
     ann->setLayerSizes(layers);
-    ann->setTrainMethod(ANN_MLP::TrainingMethods::BACKPROP);
+    ann->setTrainMethod(ANN_MLP::BACKPROP ); //RPROP
     //Prepare trainClases
     //Create a mat with n trained data by m classes
     Mat trainClasses;
@@ -315,10 +315,13 @@ void OCR::train(Mat TrainData3, Mat classes, int nlayers){
                 trainClasses.at<float>(i,k) = 0;
         }
     }
-    Mat weights( 1, TrainData3.rows, CV_32FC1, Scalar::all(1) );
+//    Mat weights( 1, TrainData3.rows, CV_32FC1, Scalar::all(1) );
     
     //Learn classifier
     Ptr<ml::TrainData> trainData2 = TrainData::create(TrainData3, ROW_SAMPLE, trainClasses);
+
+    std::cout<<"ann train layerSizes:" <<ann->getLayerSizes()<<std::endl;
+
     ann->train(trainData2);
 //  ann->train( TrainData, trainClasses, weights );
 
@@ -334,6 +337,7 @@ int OCR::classify(Mat f){
     minMaxLoc(output, 0, &maxVal, 0, &maxLoc);
     //We need know where in output is the max val, the x (cols) is the class.
 
+    std::cout<<"ocr::classify:"<<maxLoc.x<<std::endl;
     return maxLoc.x;
 }
 

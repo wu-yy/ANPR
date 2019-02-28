@@ -1,6 +1,7 @@
 
 
 // Main entry code OpenCV
+// 生成OCR 的训练数据
 
 #include <cv.h>
 #include <highgui.h>
